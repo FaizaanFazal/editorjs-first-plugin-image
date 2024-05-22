@@ -2,7 +2,7 @@
   "name": "first-plugin",
   "version": "1.0.0",
   "description": "",
-  "main": "puranacode.js",
+  "main": "simple-image.ts",
   "scripts": {
     "start": "tsc --watch"
   },

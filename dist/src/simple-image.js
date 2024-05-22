@@ -1,10 +1,19 @@
+"use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 class SimpleImage {
     static get toolbox() {
         return {
             title: 'Image',
             icon: '<svg width="17" height="15" viewBox="0 0 336 276" xmlns="http://www.w3.org/2000/svg"><path d="M291 150V79c0-19-15-34-34-34H79c-19 0-34 15-34 34v42l67-44 81 72 56-29 42 30zm0 52l-43-30-56 30-81-67-66 39v23c0 19 15 34 34 34h178c17 0 31-13 34-29zM79 0h178c44 0 79 35 79 79v118c0 44-35 79-79 79H79c-44 0-79-35-79-79V79C0 35 35 0 79 0z"/></svg>'
-
-        }
+        };
     }
     static get pasteConfig() {
         return {
@@ -16,17 +25,15 @@ class SimpleImage {
             patterns: {
                 image: /https?:\/\/\S+\.(gif|jpe?g|tiff|png)$/i
             }
-        }
+        };
     }
-
-    static get sanitize(){
+    static get sanitize() {
         return {
-          url: false, // disallow HTML
-          caption: {} // only tags from Inline Toolbar 
-        }
-      }
-
-    constructor({ data, api,config }) {
+            url: false, // disallow HTML
+            caption: {} // only tags from Inline Toolbar 
+        };
+    }
+    constructor({ data, api, config }) {
         this.api = api;
         this.config = config || {};
         this.data = {
@@ -53,7 +60,6 @@ class SimpleImage {
             }
         ];
     }
-
     render() {
         this.wrapper = document.createElement('div');
         this.wrapper.classList.add('simple-image');
@@ -61,15 +67,16 @@ class SimpleImage {
             this._createImage(this.data.url, this.data.caption, this.data.alt);
             return this.wrapper;
         }
-
         const input = document.createElement('input');
-        
+        input.placeholder = 'Paste an image URL...';
         input.placeholder = this.api.i18n.t(this.config.placeholder || 'Paste an image URL...');
         input.value = this.data && this.data.url ? this.data.url : '';
         input.addEventListener('paste', (event) => {
-            this._createImage(event.clipboardData.getData('text'));
+            const clipboardData = event.clipboardData;
+            if (clipboardData) {
+                this._createImage(clipboardData.getData('text'));
+            }
         });
-        
         this.wrapper.appendChild(input);
         return this.wrapper;
     }
@@ -79,61 +86,52 @@ class SimpleImage {
         const alt = document.createElement('input');
         alt.id = 'altId';
         caption.id = 'captionId';
-
         image.src = url;
-        caption.contentEditable = true;
+        caption.contentEditable = "true";
         caption.innerHTML = captionText ? captionText : 'Enter Caption';
         alt.placeholder = 'Enter Image alt text for seo...';
         alt.value = altText || '';
-
         this.wrapper.innerHTML = '';
-        this.wrapper.classList.add('flex')
+        this.wrapper.classList.add('flex');
         this.wrapper.appendChild(image);
         this.wrapper.appendChild(caption);
         this.wrapper.appendChild(alt);
-
         this._acceptTuneView();
-
     }
-
     save(blockContent) {
         const image = blockContent.querySelector('img');
         const caption = blockContent.querySelector('#captionId');
         const alt = blockContent.querySelector('#altId');
-
-
         return Object.assign(this.data, {
-            url: image.src,
-            caption: caption.innerHTML || '',
-            alt: alt.value || ''
+            url: (image === null || image === void 0 ? void 0 : image.src) || "",
+            caption: (caption === null || caption === void 0 ? void 0 : caption.innerHTML) || '',
+            alt: (alt === null || alt === void 0 ? void 0 : alt.value) || '',
+            withBorder: this.data.withBorder,
+            withBackground: this.data.withBackground,
+            stretched: this.data.stretched
         });
     }
-
     validate(savedData) {
         if (!savedData.url.trim()) {
             return false;
         }
-
         return true;
     }
-
     renderSettings() {
         const wrapper = document.createElement('div');
         this.settings.forEach(tune => {
             let button = document.createElement('div');
             button.classList.add(this.api.styles.settingsButton);
-            button.classList.toggle(this.api.styles.settingsButtonActive, this.data[tune.name]);
+            button.classList.toggle(this.api.styles.settingsButtonActive, !!this.data[tune.name]);
             button.innerHTML = tune.icon;
-            
+            wrapper.appendChild(button);
             button.addEventListener('click', () => {
                 this._toggleTune(tune.name);
                 button.classList.toggle(this.api.styles.settingsButtonActive);
             });
         });
-        wrapper.appendChild(button);
         return wrapper;
     }
-
     /**
      * @private
      * Click on the Settings Button
@@ -141,41 +139,62 @@ class SimpleImage {
      */
     _toggleTune(tune) {
         this.data[tune] = !this.data[tune];
+        this._acceptTuneView();
     }
-
-
     /**
      * Add specified class corresponds with activated tunes
      * @private
      */
     _acceptTuneView() {
         this.settings.forEach(tune => {
-            this.wrapper.classList.toggle(tune.name, !!this.data[tune.name]);
-
+            if (this.wrapper) {
+                this.wrapper.classList.toggle(tune.name, !!this.data[tune.name]);
+            }
             if (tune.name === 'stretched') {
                 this.api.blocks.stretchBlock(this.api.blocks.getCurrentBlockIndex(), !!this.data.stretched);
             }
         });
     }
-
+    onDropHandler(file) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            return new Promise((resolve, reject) => {
+                reader.onload = (event) => {
+                    if (event.target && event.target.result) {
+                        resolve({
+                            url: event.target.result,
+                            caption: file.name,
+                            alt: file.name,
+                            withBorder: false,
+                            withBackground: false,
+                            stretched: false,
+                        });
+                    }
+                    else {
+                        reject(new Error('Failed to read file'));
+                    }
+                };
+                reader.onerror = (_event) => {
+                    reject(new Error('Failed to read file'));
+                };
+            });
+        });
+    }
     onPaste(event) {
         switch (event.type) {
             case 'tag':
                 const imgTag = event.detail.data;
-
                 this._createImage(imgTag.src);
                 break;
-
-            case 'file':
-                /* We need to read file here as base64 string */
-                const file = event.detail.file;
-                const reader = new FileReader();
-                reader.onload = (loadEvent) => {
-                    this._createImage(loadEvent.target.result);
-                };
-                reader.readAsDataURL(file);
+            case 'file': {
+                const { file } = event.detail;
+                this.onDropHandler(file)
+                    .then(data => {
+                    this.data = data;
+                });
                 break;
-
+            }
             case 'pattern':
                 const src = event.detail.data;
                 this._createImage(src);
@@ -183,4 +202,3 @@ class SimpleImage {
         }
     }
 }
-

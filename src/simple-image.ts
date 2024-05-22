@@ -1,4 +1,3 @@
-
 interface DataOfImage {
     url: string;
     caption: string;
@@ -178,6 +177,7 @@ class SimpleImage {
      */
     _toggleTune(tune: keyof DataOfImage) {
         this.data[tune] = !this.data[tune];
+        this._acceptTuneView();
     }
 
 
@@ -248,4 +248,3 @@ class SimpleImage {
         }
     }
 }
-
